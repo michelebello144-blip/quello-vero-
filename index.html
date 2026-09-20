@@ -61,10 +61,11 @@ body.done .card{animation-delay:calc(var(--i)*30ms)}
 body:not(.in) .card{animation:none;opacity:0}
 .card:active{transform:scale(.95)}
 @keyframes rise{from{opacity:0;transform:translateY(40px) scale(.9)}}
-.no{position:absolute;top:14px;left:16px;z-index:2;font:700 11px var(--f);color:var(--mut)}
+.no{position:absolute;top:16px;left:18px;z-index:2;font:700 11px var(--f);color:#e6ebff;background:#070b18aa;padding:2px 7px;border-radius:8px}
 .av{position:relative;height:96px;border-radius:13px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 65%,color-mix(in srgb,var(--c) 55%,transparent),transparent 72%),#0a1026}
 .av b{font:900 46px var(--f);color:var(--c);text-shadow:0 0 18px var(--c)}
-.av img{width:100%;height:100%;object-fit:contain;animation:bob 3.2s ease-in-out infinite}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .5s}
+.av img.on{opacity:1}
 @keyframes bob{50%{transform:translateY(-5px)}}
 .card h3{margin:10px 2px 6px;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pl{display:flex;flex-wrap:wrap;gap:5px}
@@ -146,13 +147,19 @@ label{display:block;margin:16px 0 6px;color:var(--mut);font-size:14px}
 .pnav button{width:54px;height:54px;border-radius:50%;border:2px solid var(--line);background:#0b1130;color:var(--cyan);font-size:28px;line-height:1;box-shadow:0 4px 18px #0008;transition:transform .2s}
 .pnav button:active{transform:scale(.88)}
 .pnav span{min-width:64px;text-align:center;font:700 15px var(--f)}
+.ph{display:flex;gap:12px;align-items:center}
+.pv{width:88px;height:88px;flex:none;border-radius:14px;background:#0b1130;border:1px solid var(--line);display:grid;place-items:center;font-size:30px;overflow:hidden}
+.pv img{width:100%;height:100%;object-fit:cover}
+.pb{display:grid;gap:8px;flex:1}
+.pb .btn{padding:11px;font-size:15px}
+label.fl{margin:0;color:var(--txt);font-size:15px;text-align:center;cursor:pointer}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important}}
 </style></head><body>
 <div class="bgfx"></div>
 <main id="app">
  <header class="hd">
   <div class="tl"><h1>FIGADEX</h1><span class="cnt"><b id="cnt">0</b> registrati</span><span class="st" id="st"></span></div>
-  <div class="sr"><input id="q" type="search" placeholder="Cerca per nome o caratteristica"><div class="vt"><button data-v="grid" aria-label="Vista a quadrati"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></button><button data-v="page" aria-label="Vista a pagine"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5c3-1.5 6-1.5 8 0 2-1.5 5-1.5 8 0v14c-3-1.5-6-1.5-8 0-2-1.5-5-1.5-8 0z"/><path d="M12 5v14"/></svg></button></div></div>
+  <div class="sr"><input id="q" type="search" placeholder="Cerca…"><div class="vt"><button data-v="grid" aria-label="Vista a quadrati"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></button><button data-v="page" aria-label="Vista a pagine"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 5c3-1.5 6-1.5 8 0 2-1.5 5-1.5 8 0v14c-3-1.5-6-1.5-8 0-2-1.5-5-1.5-8 0z"/><path d="M12 5v14"/></svg></button></div></div>
   <div class="chips" id="ct"></div>
   <div class="chips" id="cc"></div>
  </header>
@@ -185,19 +192,46 @@ async function init(){
  let bad=0;
  if(DB_URL){try{
   const {initializeApp}=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-  const {getDatabase,ref,onValue,set,remove}=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+  const {getDatabase,ref,onValue,set,remove,get,update}=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
   const db=getDatabase(initializeApp({databaseURL:DB_URL}));
-  onValue(ref(db,'dex'),s=>{data=s.val()||{};render();setMode('online')},()=>setMode('errore'));
-  api={save:(id,o)=>set(ref(db,'dex/'+id),o),del:id=>remove(ref(db,'dex/'+id))};
+  const mig=new Set();
+  onValue(ref(db,'dex'),s=>{data=s.val()||{};render();setMode('online');
+   for(const [id,e] of Object.entries(data)){if(e&&typeof e.img==='string'&&e.img.startsWith('data:image/')&&!mig.has(id)){mig.add(id);set(ref(db,'pics/'+id),e.img).then(()=>update(ref(db,'dex/'+id),{img:null,p:Date.now()})).catch(()=>{})}}
+  },()=>setMode('errore'));
+  api={save:(id,o,pic)=>{const w=typeof pic==='string'?set(ref(db,'pics/'+id),pic):pic===null?remove(ref(db,'pics/'+id)):Promise.resolve();return w.then(()=>set(ref(db,'dex/'+id),o))},
+   del:(id,hp)=>remove(ref(db,'dex/'+id)).then(()=>hp&&remove(ref(db,'pics/'+id))),
+   pic:id=>get(ref(db,'pics/'+id)).then(s=>s.val())};
   return}catch(e){bad=1}}
  try{data=JSON.parse(localStorage.getItem('figadex')||'{}')}catch(e){}
  const p=()=>{try{localStorage.setItem('figadex',JSON.stringify(data))}catch(e){}render()};
- api={save:(id,o)=>{data[id]=o;p()},del:id=>{delete data[id];p()}};
+ api={save:(id,o,pic)=>{if(typeof pic==='string'){o.img=pic;o.p=0}data[id]=o;p()},del:id=>{delete data[id];p()}};
  setMode(bad?'errore':'locale');render();
 }
 
 const pills=t=>(t||[]).map(x=>`<span class="pill" style="--c:${col(x)}">${esc(x)}</span>`).join('');
-const av=e=>/^https?:\/\//.test(e.img||'')?`<img src="${esc(e.img)}" loading="lazy" alt="" onerror="this.remove()">`:`<b>${esc((e.name||'?')[0]).toUpperCase()}</b>`;
+const okImg=s=>/^(https?:\/\/|data:image\/jpeg;base64,)/.test(s||'');
+const av=(e,id)=>{
+ const L=`<b>${esc((e.name||'?')[0]).toUpperCase()}</b>`,ld=`onload="this.classList.add('on')" onerror="this.remove()"`;
+ if(okImg(e.img))return L+`<img src="${esc(e.img)}" alt="" ${ld}>`;
+ if(e.p&&id){const c=picCache[id+':'+e.p];return L+`<img alt="" data-pic="${esc(id)}" data-k="${esc(String(e.p))}"${c?` src="${esc(c)}"`:''} ${ld}>`}
+ return L};
+const picCache={},pending={};
+function loadPic(id,p){
+ const k=id+':'+p;
+ if(picCache[k])return Promise.resolve(picCache[k]);
+ if(!api||!api.pic)return Promise.resolve();
+ return pending[k]||(pending[k]=api.pic(id).then(v=>{delete pending[k];if(okImg(v)){picCache[k]=v;return v}}).catch(()=>{delete pending[k]}));
+}
+function loadImg(i){loadPic(i.dataset.pic,i.dataset.k).then(v=>{if(v&&i.isConnected)i.src=v})}
+const obs={};
+function lazy(root){
+ if(obs[root])obs[root].disconnect();
+ const imgs=[...$(root).querySelectorAll('img[data-pic]:not([src])')];
+ if(!imgs.length)return;
+ if(!window.IntersectionObserver){imgs.forEach(loadImg);return}
+ const o=obs[root]=new IntersectionObserver(es=>es.forEach(en=>{if(en.isIntersecting){o.unobserve(en.target);loadImg(en.target)}}),{rootMargin:'300px'});
+ imgs.forEach(i=>o.observe(i));
+}
 const clsOk=c=>Object.hasOwn(CLS,c)?c:'normale';
 const pad=n=>'#'+String(n).padStart(3,'0');
 
@@ -214,10 +248,11 @@ function render(){
   pg=Math.max(0,Math.min(pg,len-1));
   const e=list[pg],c=clsOk(e.cls);
   const tr=(e.traits||[]).length?'<h4>Caratteristiche</h4>'+e.traits.map((t,i)=>`<div class="tr" style="--i:${i}"><span>${esc(t.k)}</span><b>${esc(t.v)}</b></div>`).join(''):'';
-  g.innerHTML=`<article class="page c-${c}" data-id="${esc(e.id)}" style="--c:${col((e.types||[])[0])}"><div class="pi ${dir>0?'inR':dir<0?'inL':''}"><div class="pt"><span class="no2">${pad(nums[e.id])}</span><span class="bdg">${CLS[c]}</span></div><div class="av">${av(e)}</div><h2>${esc(e.name)}</h2><div class="pl">${pills(e.types)}</div>${tr}<button class="btn ghost" onclick="show(this.closest('.page').dataset.id)">Modifica o elimina</button></div></article><nav class="pnav"><button onclick="go(-1)" aria-label="Precedente">‹</button><span>${pg+1} / ${len}</span><button onclick="go(1)" aria-label="Successivo">›</button></nav>`;
-  dir=0;return}
+  g.innerHTML=`<article class="page c-${c}" data-id="${esc(e.id)}" style="--c:${col((e.types||[])[0])}"><div class="pi ${dir>0?'inR':dir<0?'inL':''}"><div class="pt"><span class="no2">${pad(nums[e.id])}</span><span class="bdg">${CLS[c]}</span></div><div class="av">${av(e,e.id)}</div><h2>${esc(e.name)}</h2><div class="pl">${pills(e.types)}</div>${tr}<button class="btn ghost" onclick="show(this.closest('.page').dataset.id)">Modifica o elimina</button></div></article><nav class="pnav"><button onclick="go(-1)" aria-label="Precedente">‹</button><span>${pg+1} / ${len}</span><button onclick="go(1)" aria-label="Successivo">›</button></nav>`;
+  dir=0;lazy('#grid');return}
  g.className='grid';
- $('#grid').innerHTML=list.length?list.map((e,i)=>{const c=clsOk(e.cls);return `<div class="card c-${c}" data-id="${esc(e.id)}" style="--i:${Math.min(i,10)};--c:${col((e.types||[])[0])}"><span class="no">${pad(nums[e.id])}</span><div class="av">${av(e)}</div><h3>${esc(e.name)}</h3><div class="pl">${pills(e.types)}</div><span class="bdg">${CLS[c]}</span></div>`}).join(''):`<p class="empty">${all.length?'Nessun risultato con questi filtri.':'Il FigaDex è vuoto.<br>Tocca + per aggiungere la prima figa!'}</p>`;
+ $('#grid').innerHTML=list.length?list.map((e,i)=>{const c=clsOk(e.cls);return `<div class="card c-${c}" data-id="${esc(e.id)}" style="--i:${Math.min(i,10)};--c:${col((e.types||[])[0])}"><span class="no">${pad(nums[e.id])}</span><div class="av">${av(e,e.id)}</div><h3>${esc(e.name)}</h3><div class="pl">${pills(e.types)}</div><span class="bdg">${CLS[c]}</span></div>`}).join(''):`<p class="empty">${all.length?'Nessun risultato con questi filtri.':'Il FigaDex è vuoto.<br>Tocca + per aggiungere la prima figa!'}</p>`;
+ lazy('#grid');
 }
 
 $('#grid').onclick=e=>{const c=e.target.closest('.card');if(c)show(c.dataset.id)};
@@ -228,27 +263,28 @@ function mark(){$$('#ct .chip').forEach(b=>b.classList.toggle('on',b.dataset.t==
 $('#ct').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;ft=ft===b.dataset.t?'':b.dataset.t;pg=0;mark();render()};
 $('#cc').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;fc=fc===b.dataset.c?'':b.dataset.c;pg=0;mark();render()};
 
-function sheet(h){const s=$('#sheet');s.innerHTML=h;s.scrollTop=0;document.body.classList.add('sh')}
+function sheet(h){const s=$('#sheet');s.innerHTML=h;s.scrollTop=0;document.body.classList.add('sh');lazy('#sheet')}
 function closeSheet(){document.body.classList.remove('sh')}
 $('#bd').onclick=closeSheet;
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200)}
 
 function show(id){
- const e=data[id];if(!e)return;cur=id;const c=clsOk(e.cls);
- sheet(`<div class="c-${c}"><div class="dh" style="--c:${col((e.types||[])[0])}"><div class="av">${av(e)}</div><div><small>${pad(nums[id])}</small><h2>${esc(e.name)}</h2><span class="bdg">${CLS[c]}</span></div></div></div>
+ const e0=data[id];if(!e0)return;const e={...e0,id};cur=id;const c=clsOk(e.cls);
+ sheet(`<div class="c-${c}"><div class="dh" style="--c:${col((e.types||[])[0])}"><div class="av">${av(e,e.id)}</div><div><small>${pad(nums[id])}</small><h2>${esc(e.name)}</h2><span class="bdg">${CLS[c]}</span></div></div></div>
  <div class="pl">${pills(e.types)}</div>
  ${(e.traits||[]).length?'<h4>Caratteristiche</h4>'+e.traits.map((t,i)=>`<div class="tr" style="--i:${i};--c:${col((e.types||[])[0])}"><span>${esc(t.k)}</span><b>${esc(t.v)}</b></div>`).join(''):''}
  <div class="row"><button class="btn ghost" onclick="openForm(cur)">Modifica</button><button class="btn del" onclick="del()">Elimina</button></div>`);
 }
-function del(){if(confirm('Eliminare questa figa per tutti?')){api.del(cur);closeSheet();toast('Eliminato')}}
+function del(){if(confirm('Eliminare questa figa per tutti?')){api.del(cur,data[cur]&&data[cur].p);closeSheet();toast('Eliminato')}}
 
 const trRow=(k='',v='')=>`<div class="trr"><input placeholder="Nome (es. Altezza)" value="${esc(k)}" maxlength="30"><input placeholder="Valore" value="${esc(v)}" maxlength="60"><button type="button" onclick="this.parentNode.remove()">×</button></div>`;
 function openForm(id){
  const e=id&&data[id]?data[id]:{name:'',img:'',types:[],cls:'normale',traits:[]};cur=id&&data[id]?id:null;
- f={types:new Set((e.types||[]).filter(t=>Object.hasOwn(TYPES,t))),cls:clsOk(e.cls)};
+ f={types:new Set((e.types||[]).filter(t=>Object.hasOwn(TYPES,t))),cls:clsOk(e.cls),img:e.img||'',keep:!!(e.p&&!okImg(e.img)),p:e.p||0};
  sheet(`<h2>${cur?'Modifica figa':'Aggiungi figa'}</h2>
  <label>Nome</label><input id="fn" value="${esc(e.name)}" maxlength="30" autocomplete="off">
- <label>Immagine (link, facoltativo)</label><input id="fi" value="${esc(e.img)}" placeholder="https://…" inputmode="url">
+ <label>Foto (facoltativa)</label>
+ <div class="ph"><div class="pv" id="pv"></div><div class="pb"><label class="btn ghost fl">Scegli dalla galleria<input type="file" accept="image/*" hidden onchange="pick(this)"></label><button type="button" class="btn del" onclick="f.img='';f.keep=false;setPv()">Rimuovi foto</button></div></div>
  <label>Tipi (puoi sceglierne più di uno)</label>
  <div class="pl wrap">${Object.keys(TYPES).map(t=>`<button type="button" class="pill${f.types.has(t)?' on':''}" data-t="${t}" style="--c:${TYPES[t]}" onclick="tt(this)">${t}</button>`).join('')}</div>
  <label>Classe</label>
@@ -256,7 +292,23 @@ function openForm(id){
  <label>Caratteristiche personalizzate</label>
  <div id="trs">${(e.traits||[]).map(t=>trRow(t.k,t.v)).join('')}</div>
  <button type="button" class="btn add" onclick="$('#trs').insertAdjacentHTML('beforeend',trRow())">+ Aggiungi caratteristica</button>
- <button type="button" class="btn main" onclick="save()">Salva nel FigaDex</button>`);
+ <button type="button" class="btn main" onclick="save()">Salva nel FigaDex</button>`);setPv();
+}
+function setPv(){
+ const p=$('#pv');if(!p)return;
+ if(okImg(f.img))p.innerHTML=`<img src="${esc(f.img)}" alt="">`;
+ else if(f.keep){const c=picCache[cur+':'+f.p];p.innerHTML=c?`<img src="${esc(c)}" alt="">`:'⏳';if(!c)loadPic(cur,f.p).then(v=>{if(v)setPv()})}
+ else p.textContent='📷'}
+function pick(inp){
+ const file=inp.files[0];if(!file)return;
+ const im=new Image(),u=URL.createObjectURL(file);
+ im.onload=()=>{
+  const k=Math.min(1,280/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k),c=document.createElement('canvas');
+  c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);
+  f.img=c.toDataURL('image/jpeg',.65);f.keep=false;URL.revokeObjectURL(u);setPv();inp.value='';
+ };
+ im.onerror=()=>toast('Foto non valida');
+ im.src=u;
 }
 function tt(b){const t=b.dataset.t;f.types.has(t)?f.types.delete(t):f.types.add(t);b.classList.toggle('on')}
 function tc(b){f.cls=b.dataset.c;$$('.seg button').forEach(x=>x.classList.toggle('on',x===b))}
@@ -265,8 +317,13 @@ function save(){
  if(!name)return toast('Scrivi un nome');
  if(!f.types.size)return toast('Scegli almeno un tipo');
  const traits=[...$$('.trr')].map(r=>{const i=r.querySelectorAll('input');return{k:i[0].value.trim(),v:i[1].value.trim()}}).filter(t=>t.k);
- const old=cur?data[cur]:null;
- api.save(cur||uid(),{name,img:$('#fi').value.trim(),types:[...f.types],cls:f.cls,traits,t:old?old.t||Date.now():Date.now()});
+ const old=cur?data[cur]:null,id=cur||uid();
+ const o={name,img:'',types:[...f.types],cls:f.cls,traits,t:old?old.t||Date.now():Date.now(),p:0};
+ let pic=old&&old.p?null:undefined;
+ if(/^data:image\//.test(f.img)){pic=f.img;o.p=Date.now()}
+ else if(f.img)o.img=f.img;
+ else if(f.keep){o.p=f.p;pic=undefined}
+ Promise.resolve(api.save(id,o,pic)).catch(()=>toast('Errore: non salvato. Controlla le regole di Firebase'));
  closeSheet();toast('Salvato');
 }
 $('#fab').onclick=()=>openForm(null);
