@@ -62,7 +62,7 @@ body:not(.in) .card{animation:none;opacity:0}
 .card:active{transform:scale(.95)}
 @keyframes rise{from{opacity:0;transform:translateY(40px) scale(.9)}}
 .no{position:absolute;top:16px;left:18px;z-index:2;font:700 11px var(--f);color:#e6ebff;background:#070b18aa;padding:2px 7px;border-radius:8px}
-.av{position:relative;height:96px;border-radius:13px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 65%,color-mix(in srgb,var(--c) 55%,transparent),transparent 72%),#0a1026}
+.av{position:relative;aspect-ratio:3/4;border-radius:13px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 65%,color-mix(in srgb,var(--c) 55%,transparent),transparent 72%),#0a1026}
 .av b{font:900 46px var(--f);color:var(--c);text-shadow:0 0 18px var(--c)}
 .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .5s}
 .av img.on{opacity:1}
@@ -111,7 +111,7 @@ label{display:block;margin:16px 0 6px;color:var(--mut);font-size:14px}
 .btn.del{background:#3a1220;color:#ff8a9a}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:26px}
 .dh{display:flex;gap:16px;align-items:center;margin-bottom:14px}
-.dh .av{width:120px;height:120px;flex:none}
+.dh .av{width:120px;flex:none}
 .dh small{color:var(--mut);font:700 12px var(--f)}
 .dh h2{font-size:24px;margin:4px 0 0}
 .tr{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;margin-bottom:6px;border-radius:12px;background:#0b1130;border-left:3px solid var(--c,#38e8ff);animation:sl .5s both;animation-delay:calc(var(--i)*70ms + .2s)}
@@ -137,7 +137,7 @@ label{display:block;margin:16px 0 6px;color:var(--mut);font-size:14px}
 .pt{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .no2{font:700 13px var(--f);color:var(--mut)}
 .pt .bdg{margin:0}
-.page .av{height:200px;border-radius:18px}
+.page .av{max-width:300px;margin:0 auto;border-radius:18px}
 .page .av b{font-size:96px}
 .page h2{font:700 26px var(--f);margin:16px 0 10px;text-align:center}
 .page .pl{justify-content:center}
@@ -148,8 +148,9 @@ label{display:block;margin:16px 0 6px;color:var(--mut);font-size:14px}
 .pnav button:active{transform:scale(.88)}
 .pnav span{min-width:64px;text-align:center;font:700 15px var(--f)}
 .ph{display:flex;gap:12px;align-items:center}
-.pv{width:88px;height:88px;flex:none;border-radius:14px;background:#0b1130;border:1px solid var(--line);display:grid;place-items:center;font-size:30px;overflow:hidden}
-.pv img{width:100%;height:100%;object-fit:cover}
+.pv{width:120px;aspect-ratio:3/4;flex:none;border-radius:14px;background:#0b1130;border:1px solid var(--line);display:grid;place-items:center;font-size:30px;overflow:hidden;touch-action:none;cursor:grab}
+.pv img{width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.hint{font-size:12.5px;color:var(--mut);margin:8px 0 0}
 .pb{display:grid;gap:8px;flex:1}
 .pb .btn{padding:11px;font-size:15px}
 label.fl{margin:0;color:var(--txt);font-size:15px;text-align:center;cursor:pointer}
@@ -210,10 +211,11 @@ async function init(){
 
 const pills=t=>(t||[]).map(x=>`<span class="pill" style="--c:${col(x)}">${esc(x)}</span>`).join('');
 const okImg=s=>/^(https?:\/\/|data:image\/jpeg;base64,)/.test(s||'');
+const np=(v,d)=>{v=Number(v);return Number.isFinite(v)?Math.max(0,Math.min(100,v)):d};
 const av=(e,id)=>{
- const L=`<b>${esc((e.name||'?')[0]).toUpperCase()}</b>`,ld=`onload="this.classList.add('on')" onerror="this.remove()"`;
- if(okImg(e.img))return L+`<img src="${esc(e.img)}" alt="" ${ld}>`;
- if(e.p&&id){const c=picCache[id+':'+e.p];return L+`<img alt="" data-pic="${esc(id)}" data-k="${esc(String(e.p))}"${c?` src="${esc(c)}"`:''} ${ld}>`}
+ const L=`<b>${esc((e.name||'?')[0]).toUpperCase()}</b>`,ld=`onload="this.classList.add('on')" onerror="this.remove()"`,ps=`style="object-position:${np(e.fx,50)}% ${np(e.fy,25)}%"`;
+ if(okImg(e.img))return L+`<img src="${esc(e.img)}" alt="" ${ps} ${ld}>`;
+ if(e.p&&id){const c=picCache[id+':'+e.p];return L+`<img alt="" ${ps} data-pic="${esc(id)}" data-k="${esc(String(e.p))}"${c?` src="${esc(c)}"`:''} ${ld}>`}
  return L};
 const picCache={},pending={};
 function loadPic(id,p){
@@ -280,11 +282,11 @@ function del(){if(confirm('Eliminare questa figa per tutti?')){api.del(cur,data[
 const trRow=(k='',v='')=>`<div class="trr"><input placeholder="Nome (es. Altezza)" value="${esc(k)}" maxlength="30"><input placeholder="Valore" value="${esc(v)}" maxlength="60"><button type="button" onclick="this.parentNode.remove()">×</button></div>`;
 function openForm(id){
  const e=id&&data[id]?data[id]:{name:'',img:'',types:[],cls:'normale',traits:[]};cur=id&&data[id]?id:null;
- f={types:new Set((e.types||[]).filter(t=>Object.hasOwn(TYPES,t))),cls:clsOk(e.cls),img:e.img||'',keep:!!(e.p&&!okImg(e.img)),p:e.p||0};
+ f={types:new Set((e.types||[]).filter(t=>Object.hasOwn(TYPES,t))),cls:clsOk(e.cls),img:e.img||'',keep:!!(e.p&&!okImg(e.img)),p:e.p||0,fx:np(e.fx,50),fy:np(e.fy,25)};
  sheet(`<h2>${cur?'Modifica figa':'Aggiungi figa'}</h2>
  <label>Nome</label><input id="fn" value="${esc(e.name)}" maxlength="30" autocomplete="off">
  <label>Foto (facoltativa)</label>
- <div class="ph"><div class="pv" id="pv"></div><div class="pb"><label class="btn ghost fl">Scegli dalla galleria<input type="file" accept="image/*" hidden onchange="pick(this)"></label><button type="button" class="btn del" onclick="f.img='';f.keep=false;setPv()">Rimuovi foto</button></div></div>
+ <div class="ph"><div class="pv" id="pv"></div><div class="pb"><label class="btn ghost fl">Scegli dalla galleria<input type="file" accept="image/*" hidden onchange="pick(this)"></label><button type="button" class="btn del" onclick="f.img='';f.keep=false;setPv()">Rimuovi foto</button></div></div><p class="hint">Trascina la foto per scegliere cosa si vede nella scheda.</p>
  <label>Tipi (puoi sceglierne più di uno)</label>
  <div class="pl wrap">${Object.keys(TYPES).map(t=>`<button type="button" class="pill${f.types.has(t)?' on':''}" data-t="${t}" style="--c:${TYPES[t]}" onclick="tt(this)">${t}</button>`).join('')}</div>
  <label>Classe</label>
@@ -298,18 +300,27 @@ function setPv(){
  const p=$('#pv');if(!p)return;
  if(okImg(f.img))p.innerHTML=`<img src="${esc(f.img)}" alt="">`;
  else if(f.keep){const c=picCache[cur+':'+f.p];p.innerHTML=c?`<img src="${esc(c)}" alt="">`:'⏳';if(!c)loadPic(cur,f.p).then(v=>{if(v)setPv()})}
- else p.textContent='📷'}
+ else p.textContent='📷';
+ const i=p.querySelector('img');if(i)i.style.objectPosition=f.fx+'% '+f.fy+'%'}
 function pick(inp){
  const file=inp.files[0];if(!file)return;
  const im=new Image(),u=URL.createObjectURL(file);
  im.onload=()=>{
-  const k=Math.min(1,280/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k),c=document.createElement('canvas');
+  const k=Math.min(1,400/Math.max(im.width,im.height)),w=Math.round(im.width*k),h=Math.round(im.height*k),c=document.createElement('canvas');
   c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);
-  f.img=c.toDataURL('image/jpeg',.65);f.keep=false;URL.revokeObjectURL(u);setPv();inp.value='';
+  f.img=c.toDataURL('image/jpeg',.72);f.keep=false;f.fx=50;f.fy=25;URL.revokeObjectURL(u);setPv();inp.value='';
  };
  im.onerror=()=>toast('Foto non valida');
  im.src=u;
 }
+let dg=null;
+$('#sheet').addEventListener('pointerdown',e=>{const pv=e.target.closest('#pv'),i=pv&&pv.querySelector('img');if(!i||!i.naturalWidth)return;
+ const r=pv.getBoundingClientRect(),k=Math.max(r.width/i.naturalWidth,r.height/i.naturalHeight);
+ dg={x:e.clientX,y:e.clientY,fx:f.fx,fy:f.fy,ox:i.naturalWidth*k-r.width,oy:i.naturalHeight*k-r.height};pv.setPointerCapture(e.pointerId)});
+$('#sheet').addEventListener('pointermove',e=>{if(!dg)return;const cl=v=>Math.max(0,Math.min(100,v));
+ if(dg.ox>1)f.fx=cl(dg.fx-(e.clientX-dg.x)/dg.ox*100);if(dg.oy>1)f.fy=cl(dg.fy-(e.clientY-dg.y)/dg.oy*100);
+ const i=$('#pv img');if(i)i.style.objectPosition=f.fx+'% '+f.fy+'%'});
+['pointerup','pointercancel'].forEach(t=>$('#sheet').addEventListener(t,()=>{dg=null}));
 function tt(b){const t=b.dataset.t;f.types.has(t)?f.types.delete(t):f.types.add(t);b.classList.toggle('on')}
 function tc(b){f.cls=b.dataset.c;$$('.seg button').forEach(x=>x.classList.toggle('on',x===b))}
 function save(){
@@ -318,7 +329,7 @@ function save(){
  if(!f.types.size)return toast('Scegli almeno un tipo');
  const traits=[...$$('.trr')].map(r=>{const i=r.querySelectorAll('input');return{k:i[0].value.trim(),v:i[1].value.trim()}}).filter(t=>t.k);
  const old=cur?data[cur]:null,id=cur||uid();
- const o={name,img:'',types:[...f.types],cls:f.cls,traits,t:old?old.t||Date.now():Date.now(),p:0};
+ const o={name,img:'',types:[...f.types],cls:f.cls,traits,t:old?old.t||Date.now():Date.now(),p:0,fx:Math.round(f.fx),fy:Math.round(f.fy)};
  let pic=old&&old.p?null:undefined;
  if(/^data:image\//.test(f.img)){pic=f.img;o.p=Date.now()}
  else if(f.img)o.img=f.img;
