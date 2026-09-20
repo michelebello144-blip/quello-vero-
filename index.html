@@ -238,12 +238,12 @@ function show(id){
  sheet(`<div class="c-${c}"><div class="dh" style="--c:${col((e.types||[])[0])}"><div class="av">${av(e)}</div><div><small>${pad(nums[id])}</small><h2>${esc(e.name)}</h2><span class="bdg">${CLS[c]}</span></div></div></div>
  <div class="pl">${pills(e.types)}</div>
  ${(e.traits||[]).length?'<h4>Caratteristiche</h4>'+e.traits.map((t,i)=>`<div class="tr" style="--i:${i};--c:${col((e.types||[])[0])}"><span>${esc(t.k)}</span><b>${esc(t.v)}</b></div>`).join(''):''}
- <div class="row"><button class="btn ghost" onclick="form(cur)">Modifica</button><button class="btn del" onclick="del()">Elimina</button></div>`);
+ <div class="row"><button class="btn ghost" onclick="openForm(cur)">Modifica</button><button class="btn del" onclick="del()">Elimina</button></div>`);
 }
 function del(){if(confirm('Eliminare questa figa per tutti?')){api.del(cur);closeSheet();toast('Eliminato')}}
 
 const trRow=(k='',v='')=>`<div class="trr"><input placeholder="Nome (es. Altezza)" value="${esc(k)}" maxlength="30"><input placeholder="Valore" value="${esc(v)}" maxlength="60"><button type="button" onclick="this.parentNode.remove()">×</button></div>`;
-function form(id){
+function openForm(id){
  const e=id&&data[id]?data[id]:{name:'',img:'',types:[],cls:'normale',traits:[]};cur=id&&data[id]?id:null;
  f={types:new Set((e.types||[]).filter(t=>Object.hasOwn(TYPES,t))),cls:clsOk(e.cls)};
  sheet(`<h2>${cur?'Modifica figa':'Aggiungi figa'}</h2>
@@ -269,7 +269,7 @@ function save(){
  api.save(cur||uid(),{name,img:$('#fi').value.trim(),types:[...f.types],cls:f.cls,traits,t:old?old.t||Date.now():Date.now()});
  closeSheet();toast('Salvato');
 }
-$('#fab').onclick=()=>form(null);
+$('#fab').onclick=()=>openForm(null);
 function go(d){if(len<2)return;pg=(pg+d+len)%len;dir=d;render();scrollTo({top:0,behavior:'smooth'})}
 function setView(v){view=v;pg=0;dir=0;try{localStorage.setItem('figadexView',v)}catch(e){}$$('.vt button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));render();scrollTo(0,0)}
 $('.vt').onclick=e=>{const b=e.target.closest('button');if(b&&b.dataset.v!==view)setView(b.dataset.v)};
