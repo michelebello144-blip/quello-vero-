@@ -168,7 +168,7 @@ label{display:block;margin:16px 0 6px;color:var(--mut);font-size:14px}
 </div>
 <script>
 // ▼▼ INCOLLA QUI l'indirizzo del tuo Realtime Database di Firebase (vedi istruzioni) ▼▼
-const DB_URL = "";
+const DB_URL = "https://figadex-default-rtdb.firebaseio.com";
 // ▲▲ Se resta vuoto, i dati restano solo su questo telefono ▲▲
 
 const TYPES={Normale:'#b5b58a',Fuoco:'#ff8a3d',Acqua:'#4d9bff',Elettro:'#ffd93a',Erba:'#4ade80',Ghiaccio:'#7eeaff',Lotta:'#f0483e',Veleno:'#b862f5',Terra:'#d9a441',Volante:'#9aa5ff',Psico:'#ff6fb1',Coleottero:'#a3d63c',Roccia:'#b8b0a0',Spettro:'#8b5cf6',Drago:'#6366f1',Buio:'#8a7f78',Acciaio:'#a9b7c9',Folletto:'#fbb6d8'};
@@ -182,17 +182,18 @@ try{view=localStorage.getItem('figadexView')==='page'?'page':'grid'}catch(e){}
 
 function setMode(m){const s=$('#st');s.textContent=m;s.style.setProperty('--c',m==='online'?'#3aff8a':m==='locale'?'#ffd23a':'#ff5364')}
 async function init(){
+ let bad=0;
  if(DB_URL){try{
   const {initializeApp}=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
   const {getDatabase,ref,onValue,set,remove}=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
   const db=getDatabase(initializeApp({databaseURL:DB_URL}));
   onValue(ref(db,'dex'),s=>{data=s.val()||{};render();setMode('online')},()=>setMode('errore'));
   api={save:(id,o)=>set(ref(db,'dex/'+id),o),del:id=>remove(ref(db,'dex/'+id))};
-  return}catch(e){setMode('errore')}}
+  return}catch(e){bad=1}}
  try{data=JSON.parse(localStorage.getItem('figadex')||'{}')}catch(e){}
  const p=()=>{try{localStorage.setItem('figadex',JSON.stringify(data))}catch(e){}render()};
  api={save:(id,o)=>{data[id]=o;p()},del:id=>{delete data[id];p()}};
- setMode('locale');render();
+ setMode(bad?'errore':'locale');render();
 }
 
 const pills=t=>(t||[]).map(x=>`<span class="pill" style="--c:${col(x)}">${esc(x)}</span>`).join('');
